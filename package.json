@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "vitest src/**/*.test.ts"
+    "test": "vitest src/*.test.ts"
   },
   "keywords": [],
   "author": "",

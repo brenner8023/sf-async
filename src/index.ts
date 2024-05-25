@@ -2,7 +2,7 @@
 type TimeMap<T> = Map<keyof T | '_totalTime', Partial<{ start: number; duration: number }>>
 type PromiseMap<T> = Map<keyof T, Promise<any>>
 type Result<T> = Partial<Record<keyof T, any>>
-type Deps<T> = Partial<Record<keyof T, (keyof T)[]>>
+type Deps<T> = Partial<Record<string, string[]>>
 
 export default class SfAsync<Req = any, Res = any, Params = Record<string, any>> {
   private req: Req;
@@ -55,9 +55,9 @@ export default class SfAsync<Req = any, Res = any, Params = Record<string, any>>
       if (!this[field]) {
         throw new Error(`SfAsync: Invalid field in deps: ${field}`);
       }
-      this.deps[field].forEach(depField => {
+      this.deps[field]?.forEach(depField => {
         if (!this[depField]) {
-          throw new Error(`SfAsync: Invalid field in deps[${field}]: ${depField}`);
+          throw new Error(`SfAsync: Invalid field in deps[${field}]: ${depField as string}`);
         }
       });
     });
@@ -73,8 +73,8 @@ export default class SfAsync<Req = any, Res = any, Params = Record<string, any>>
   }
 
   private async serial (field: keyof this) {
-    const depFields = this.deps[field] || [];
-    await this.parallel(depFields);
+    const depFields = this.deps[field as string] || [];
+    await this.parallel(depFields as (keyof this)[]);
 
     const deps = depFields.reduce<Record<keyof this, any>>((total, curr) => {
       total[curr] = this.result[curr];
