@@ -8,13 +8,14 @@ describe('SfAsync', async () => {
   const res = { locals: {} }
   const params = { id: 1 }
 
-  class DemoAsync extends SfAsync {
-    async getData (req, res, params) {
-      return { req, res, params }
-    }
-  }
-
   test('req res params', async () => {
+
+    class DemoAsync extends SfAsync {
+      async getData (req, res, params) {
+        return { req, res, params }
+      }
+    }
+
     const demoAsync = new DemoAsync(req, res, params)
 
     const result = await demoAsync.run([])
@@ -28,30 +29,52 @@ describe('SfAsync', async () => {
     expect(getData.params).toHaveProperty('deps', {})
   })
 
-  class DemoAsync2 extends SfAsync {
-    deps = {
-      getSize: ['getTag'],
-      getData: ['getSize']
+  test('serial request', async () => {
+    class DemoAsync extends SfAsync {
+      deps = {
+        getSize: ['getTag'],
+        getData: ['getSize']
+      }
+      async getTag () {
+        return 'dress'
+      }
+      async getSize (req, res, { deps, id }) {
+        const { getTag } = deps
+        return { size: 'XL', tag: getTag, id }
+      }
+      async getData (req, res, { deps }) {
+        const { getSize } = deps
+        return { ...getSize }
+      }
     }
-    async getTag () {
-      return 'dress'
-    }
-    async getSize (req, res, { deps, id }) {
-      const { getTag } = deps
-      return { size: 'XL', tag: getTag, id }
-    }
-    async getData (req, res, { deps }) {
-      const { getSize } = deps
-      return { ...getSize }
-    }
-  }
 
-  test('serial', async () => {
-    const demoAsync2 = new DemoAsync2(req, res, params)
-    const { getData } = await demoAsync2.run(['getData'])
-    
+    const demoAsync = new DemoAsync(req, res, params)
+    const { getData } = await demoAsync.run(['getData'])
+
     expect(getData).toHaveProperty('size', 'XL')
     expect(getData).toHaveProperty('tag', 'dress')
     expect(getData).toHaveProperty('id', 1)
+  })
+
+  test('parallel request', async () => {
+    class DemoAsync extends SfAsync {
+      deps = {}
+      async getData1 () {
+        return 'dress'
+      }
+      async getData2 () {
+        return 'shirt'
+      }
+      async getData3 () {
+        return 'pants'
+      }
+    }
+
+    const demoAsync = new DemoAsync(req, res, params)
+    const { getData1, getData2, getData3 } = await demoAsync.run(['getData1', 'getData2', 'getData3'])
+
+    expect(getData1).toBe('dress')
+    expect(getData2).toBe('shirt')
+    expect(getData3).toBe('pants')
   })
 })

@@ -1,8 +1,5 @@
 
-type TimeMap<T> = Map<keyof T | '_totalTime', Partial<{ start: number; duration: number }>>
-type PromiseMap<T> = Map<keyof T, Promise<any>>
-type Result<T> = Partial<Record<keyof T, any>>
-type Deps<T> = Partial<Record<string, string[]>>
+import type { TimeMap, PromiseMap, Field, Result, RunResult, Deps } from './index.type'
 
 export default class SfAsync<Req = any, Res = any, Params = Record<string, any>> {
   private req: Req;
@@ -11,7 +8,7 @@ export default class SfAsync<Req = any, Res = any, Params = Record<string, any>>
   private timeMap: TimeMap<this> = new Map();
   private promiseMap: PromiseMap<this> = new Map();
   private result: Result<this> = {};
-  public deps: Deps<this> = {};
+  public deps: Deps = {};
 
   constructor (req: Req, res: Res, params?: Params) {
     this.req = req;
@@ -19,7 +16,7 @@ export default class SfAsync<Req = any, Res = any, Params = Record<string, any>>
     this.params = params || {} as Params;
   }
 
-  private hrtime (field: keyof this | '_totalTime') {
+  private hrtime (field: Field<this> | '_totalTime') {
     if (this.timeMap.has(field)) {
       return;
     }
@@ -35,7 +32,7 @@ export default class SfAsync<Req = any, Res = any, Params = Record<string, any>>
     };
   }
 
-  private async execPromise (field: keyof this) {
+  private async execPromise (field: Field<this>) {
     if (this.result[field]) {
       return;
     }
@@ -63,7 +60,7 @@ export default class SfAsync<Req = any, Res = any, Params = Record<string, any>>
     });
   }
 
-  private validate (fields: (keyof this)[]) {
+  private validate (fields: Field<this>[]) {
     this.validDeps();
     (fields || []).forEach(field => {
       if (!this[field]) {
@@ -72,32 +69,32 @@ export default class SfAsync<Req = any, Res = any, Params = Record<string, any>>
     });
   }
 
-  private async serial (field: keyof this) {
+  private async serial (field: Field<this>) {
     const depFields = this.deps[field as string] || [];
-    await this.parallel(depFields as (keyof this)[]);
+    await this.parallel(depFields as Field<this>[]);
 
-    const deps = depFields.reduce<Record<keyof this, any>>((total, curr) => {
+    const deps = depFields.reduce<Result<this>>((total, curr) => {
       total[curr] = this.result[curr];
       return total;
-    }, {} as any);
+    }, {});
     if (typeof this[field] === 'function') {
       return await (this[field] as Function)(this.req, this.res, { deps, ...this.params });
     }
     throw new Error(`SfAsync: ${field as string} is not a function`);
   }
 
-  private async parallel (fields: (keyof this)[]) {
+  private async parallel (fields: Field<this>[]) {
     const arr = fields.map(field => this.execPromise(field));
     await Promise.allSettled(arr).catch(error => {
       console.log(error);
     });
   }
 
-  public async run (fields: (keyof this)[] = []) {
+  public async run (fields: Field<this>[] = []) {
     const endFn = this.hrtime('_totalTime');
     this.validate(fields);
     await this.parallel(fields);
     endFn?.();
-    return this.result;
+    return this.result as RunResult<this, typeof fields[number]>;
   }
 }
