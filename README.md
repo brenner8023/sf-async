@@ -4,11 +4,18 @@
 
 通过类继承`SfAsync`的方式，子类只需要实现`deps`属性和服务请求方法，`deps`用于声明服务之间的依赖关系
 
+使用
+```js
+pnpm add sf-async
+```
+
 服务串行请求：
 ```js
 class DemoAsync extends SfAsync {
-  deps = {
-    getData: ['getId'] // 表示getData依赖了getId的返回结果
+  get deps () {
+    return {
+      getData: ['getId'] // 表示getData依赖了getId的返回结果
+    }
   }
   async getId () {
     return '1'
@@ -28,7 +35,7 @@ console.log(getData) // print { id: getId, data: 'xx' }
 服务并行请求
 ```js
 class DemoAsync extends SfAsync {
-  deps = {} // 没有任何依赖，deps可以不写
+  get deps () { return {} } // 没有任何依赖，deps可以不写
   async getData1 () {
     return '1'
   }
@@ -47,8 +54,10 @@ console.log(getData2) // print 2
 复杂的串并行请求
 ```js
 class DemoAsync extends SfAsync {
-  deps = {
-    getData2: ['getId']
+  get deps () {
+    return {
+      getData2: ['getId']
+    }
   }
   async getId () {
     return 'id1'
@@ -66,4 +75,28 @@ const { getData1, getData2 } = await demoAsync.run(['getData1', 'getData2'])
 
 console.log(getData1) // print data1
 console.log(getData2) // print { id: 'id1', data: 'data2' }
+```
+
+支持在运行时确定服务请求的依赖关系：
+```js
+class DemoAsync extends SfAsync {
+  get deps () {
+    const { isFirstPage } = this.params
+    return {
+      getData1: isFirstPage ? ['getData2'] : ['getData3'],
+    }
+  }
+  async getData1 (req, res, { deps }) {
+    const { getData2, getData3 } = deps
+    return { getData2, getData3 }
+  }
+  async getData2 () {
+    return 'data2'
+  }
+  async getData3 () {
+    return 'data3'
+  }
+}
+
+new DemoAsync(req, res, { isFirstPage: req.query.isFirstPage })
 ```

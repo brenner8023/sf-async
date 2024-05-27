@@ -2,13 +2,15 @@
 import type { TimeMap, PromiseMap, Field, Result, RunResult, Deps } from './index.type'
 
 export default class SfAsync<Req = any, Res = any, Params = Record<string, any>> {
-  private req: Req;
-  private res: Res;
-  private params: Params;
+  public req: Req;
+  public res: Res;
+  public params: Params;
   private timeMap: TimeMap<this> = new Map();
   private promiseMap: PromiseMap<this> = new Map();
   private result: Result<this> = {};
-  public deps: Deps = {};
+  public get deps (): Deps {
+    return {};
+  };
 
   constructor (req: Req, res: Res, params?: Params) {
     this.req = req;

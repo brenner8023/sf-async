@@ -31,9 +31,11 @@ describe('SfAsync', async () => {
 
   test('serial request', async () => {
     class DemoAsync extends SfAsync {
-      deps = {
-        getSize: ['getTag'],
-        getData: ['getSize']
+      get deps () {
+        return {
+          getSize: ['getTag'],
+          getData: ['getSize'],
+        }
       }
       async getTag () {
         return 'dress'
@@ -58,7 +60,7 @@ describe('SfAsync', async () => {
 
   test('parallel request', async () => {
     class DemoAsync extends SfAsync {
-      deps = {}
+      get deps () { return {} }
       async getData1 () {
         return 'dress'
       }
@@ -76,5 +78,42 @@ describe('SfAsync', async () => {
     expect(getData1).toBe('dress')
     expect(getData2).toBe('shirt')
     expect(getData3).toBe('pants')
+  })
+
+  test('get deps from runtime', async () => {
+    class DemoAsync extends SfAsync {
+      get deps () {
+        const { isFirstPage } = this.params
+        return {
+          getData1: isFirstPage ? ['getData2'] : ['getData3'],
+        }
+      }
+      async getData1 (req, res, { deps }) {
+        const { getData2, getData3 } = deps
+        return { getData2, getData3 }
+      }
+      async getData2 () {
+        return 'data2'
+      }
+      async getData3 () {
+        return 'data3'
+      }
+    }
+
+    await (async () => {
+      const demoAsync = new DemoAsync(req, res, { isFirstPage: true })
+      const { getData1 } = await demoAsync.run(['getData1'])
+
+      expect(getData1).toHaveProperty('getData2', 'data2')
+      expect(getData1.getData3).toBeUndefined()
+    })();
+
+    await (async () => {
+      const demoAsync = new DemoAsync(req, res, { isFirstPage: false })
+      const { getData1 } = await demoAsync.run(['getData1'])
+
+      expect(getData1.getData2).toBeUndefined()
+      expect(getData1).toHaveProperty('getData3', 'data3')
+    })();
   })
 })

@@ -1,13 +1,13 @@
 {
   "name": "sf-async",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "",
   "main": "dist/index.js",
   "module": "dist/index.esm.js",
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "pnpm run clear && pnpm run build:cjs && pnpm run build:esm && pnpm run build:types",
-    "build:cjs": "esbuild src/index.ts --bundle --platform=node --outfile=dist/index.cjs.js --format=cjs",
+    "build:cjs": "esbuild src/index.ts --bundle --platform=node --outfile=dist/index.js --format=cjs",
     "build:esm": "esbuild src/index.ts --bundle --platform=node --outfile=dist/index.esm.js --format=esm",
     "build:types": "tsc src/index.ts --lib esnext,dom --declaration --emitDeclarationOnly --outDir dist",
     "clear": "rm -rf dist",
